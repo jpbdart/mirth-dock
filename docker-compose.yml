@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mirth:
+    build: .
+    image: mirth-connect:latest
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy  # Ensures DB is actually ready before Mirth starts
+    volumes:
+      - ./config:/config
+      - mirth-config:/opt/mirthconnect/conf
+      - mirth-logs:/opt/mirthconnect/logs
+      - mirth-database:/opt/mirthconnect/database
+    environment:
+      - MIRTH_DB_HOST=db
+      - MIRTH_DB_PORT=5432
+      - MIRTH_DB_NAME=mirthdb
+      - MIRTH_DB_USER=mirth
+      - MIRTH_DB_PASSWORD=mirthpassword
+
+  db:
+    image: postgres:14.17
+    restart: always
+    environment:
+      POSTGRES_USER: mirth
+      POSTGRES_PASSWORD: mirthpassword
+      POSTGRES_DB: mirthdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mirth -d mirthdb"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 3s
+
+volumes:
+  mirth-config:
+  mirth-logs:
+  mirth-database:
+  pg_data:
+
